@@ -1,0 +1,28 @@
+name: Extract ZIP File
+
+on:
+  push:
+    paths:
+      - '**.zip' # Triggers automatically when any .zip file is added/changed
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Unzip Website Files
+        run: |
+          # Extracts Webmacro-platform.zip into the main repository folder
+          unzip -o Webmacro-platform.zip -d ./
+          # Removes the zip file after extraction to keep the repository clean
+          rm Webmacro-platform.zip
+
+      - name: Commit and Push Extracted Files
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Automated unzip of Webmacro-platform.zip" || exit 0
+          git push
