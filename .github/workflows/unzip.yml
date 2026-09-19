@@ -3,7 +3,7 @@ name: Extract ZIP File
 on:
   push:
     paths:
-      - '**.zip' # Triggers automatically when any .zip file is added/changed
+      - '**.zip'
 
 jobs:
   extract:
@@ -12,17 +12,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Unzip Website Files
+      - name: Locate and Unzip File
         run: |
-          # Extracts Webmacro-platform.zip into the main repository folder
-          unzip -o Webmacro-platform.zip -d ./
-          # Removes the zip file after extraction to keep the repository clean
-          rm Webmacro-platform.zip
+          # Find any zip file matching 'webmacro-platform.zip' regardless of case
+          ZIP_FILE=$(find . -maxdepth 2 -iname "*webmacro-platform*.zip" | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: Could not locate zip file in repository."
+            ls -la
+            exit 1
+          fi
+
+          echo "Found file: $ZIP_FILE. Extracting..."
+          unzip -o "$ZIP_FILE" -d ./
+          rm "$ZIP_FILE"
 
       - name: Commit and Push Extracted Files
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Automated unzip of Webmacro-platform.zip" || exit 0
+          git commit -m "Automated unzip of Webmacro-platform" || exit 0
           git push
