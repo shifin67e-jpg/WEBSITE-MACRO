@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
+    <title>WebMacro · Automation Platform</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><span class="dot"></span> WebMacro</div>
+      <nav class="pill-tabs" role="tablist" aria-label="Workspace">
+        <button class="pill tab is-active" data-view="viewer" role="tab">Viewer</button>
+        <button class="pill tab" data-view="macro" role="tab">Macro</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ============================================================ -->
+      <!-- VIEW 1 — LIVE CHROMIUM VIEWER                                -->
+      <!-- ============================================================ -->
+      <section id="view-viewer" class="view is-active">
+        <div class="viewer-shell">
+          <div class="row fill">
+            <input id="address" type="text" class="grow" placeholder="Enter any URL…" autocomplete="off" spellcheck="false" />
+            <button id="btnGo" class="pill solid">Go</button>
+          </div>
+
+          <div class="row scroll-x">
+            <button id="btnFullscreen" class="pill tiny">⛶ Full</button>
+            <button id="btnZoomOut" class="pill tiny icon">−</button>
+            <button id="btnZoomReset" class="pill tiny"><span id="zoomLabel">100%</span></button>
+            <button id="btnZoomIn" class="pill tiny icon">+</button>
+            <button id="btnReload" class="pill tiny">⟳ Force reload</button>
+            <button id="btnCrop" class="pill tiny">▢ Crop hitbox</button>
+            <button id="btnPick" class="pill tiny">⌖ Pick element</button>
+          </div>
+
+          <div class="row scroll-x" id="presets"></div>
+
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="canvas" width="390" height="844"></canvas>
+            <div class="crop-layer" id="cropLayer"><div class="crop-rect" id="cropRect"></div></div>
+            <div class="canvas-overlay-note" id="cropNote" style="display: none">Drag to draw hitbox</div>
+            <div class="canvas-overlay-note" id="pickNote" style="display: none; top: 42px">Tap the element to capture</div>
+          </div>
+
+          <div class="row fill">
+            <input id="textInput" type="text" class="grow" placeholder="Type into the page (keyboard bridge)…" autocomplete="off" />
+            <button id="btnKeySend" class="pill solid">Send</button>
+          </div>
+          <div class="row scroll-x" id="keyRow"></div>
+
+          <div class="status-strip">
+            <span id="statLive">● LIVE</span>
+            <span id="statUrl">about:blank</span>
+            <span id="statSize">390×844</span>
+            <span id="statFps">FPS ~0</span>
+          </div>
+
+          <details class="block">
+            <summary>Live engine log <span class="badge">stream</span></summary>
+            <div class="body">
+              <div class="log" id="log"></div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 2 — MACRO & AUTOMATION ENGINE                           -->
+      <!-- ============================================================ -->
+      <section id="view-macro" class="view">
+        <!-- targets -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Visual targets</h2>
+            <span class="hint" id="targetCount">0 target(s)</span>
+          </div>
+          <div class="row">
+            <button class="pill tiny" onclick="document.querySelector('#view-viewer').classList.add('is-active');document.querySelector('#view-macro').classList.remove('is-active');document.querySelector('#btnCrop').click();document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('is-active',t.dataset.view==='viewer'))">▢ Crop hitbox</button>
+            <button class="pill tiny" onclick="document.querySelector('#view-viewer').classList.add('is-active');document.querySelector('#view-macro').classList.remove('is-active');document.querySelector('#btnPick').click();document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('is-active',t.dataset.view==='viewer'))">⌖ Pick element</button>
+          </div>
+          <div class="list" id="targetList"></div>
+        </div>
+
+        <!-- recorder -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Macro recorder</h2>
+            <span class="hint" id="eventCount">0 event(s)</span>
+          </div>
+          <div class="row">
+            <button id="btnRecord" class="pill tiny">● Start recorder</button>
+            <button id="btnDrain" class="pill tiny">Pull events</button>
+            <button id="btnConvert" class="pill solid tiny">Convert to steps</button>
+          </div>
+          <div class="list" id="recorderList"></div>
+        </div>
+
+        <!-- macro builder -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Macro</h2>
+            <span class="hint" id="stepCount">0 step(s)</span>
+          </div>
+          <div class="row">
+            <label class="field grow" style="min-width: 150px">Macro name<input id="macroName" type="text" value="Untitled macro" /></label>
+            <label class="field grow" style="min-width: 150px">Start URL<input id="startUrl" type="text" value="https://example.com" /></label>
+          </div>
+          <details class="block" open>
+            <summary>Action library</summary>
+            <div class="body"><div class="row" id="actionLibrary"></div></div>
+          </details>
+          <div class="list" id="stepList"></div>
+        </div>
+
+        <!-- run -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Run engine</h2>
+            <span class="hint" id="engineState">READY</span>
+          </div>
+          <div class="row">
+            <button id="btnRunOnce" class="pill solid">▶ Run once</button>
+            <button id="btnRunLoop" class="pill">⟳ Loop</button>
+            <button id="btnStopRun" class="pill">■ Stop</button>
+            <label class="field" style="min-width: 110px">Loop interval (s)<input id="loopInterval" type="number" value="30" min="5" /></label>
+          </div>
+        </div>
+
+        <!-- rules -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Conditional rules (IF → THEN → ELSE)</h2>
+            <span class="hint" id="ruleCount">0 rule(s)</span>
+          </div>
+          <div class="row">
+            <button id="btnAddRule" class="pill tiny">+ Add rule</button>
+            <button id="btnArmRules" class="pill solid tiny">Arm engine</button>
+            <button id="btnDisarmRules" class="pill tiny">Disarm</button>
+          </div>
+          <div class="list" id="ruleList"></div>
+        </div>
+
+        <!-- utilities -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Utilities</h2>
+            <span class="hint" id="autoRefreshState">OFF</span>
+          </div>
+          <details class="block" open>
+            <summary>Auto-site refresher</summary>
+            <div class="body">
+              <div class="row">
+                <label class="check"><input id="autoRefreshEnabled" type="checkbox" /> Enable loop</label>
+                <label class="check"><input id="autoRefreshHard" type="checkbox" /> Hard reload</label>
+                <label class="field" style="min-width: 120px">Interval (s)<input id="autoRefreshInterval" type="number" value="60" min="5" /></label>
+                <button id="autoRefreshApply" class="pill tiny solid">Apply</button>
+                <button id="btnRefreshNow" class="pill tiny">Refresh now</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="block">
+            <summary>Humanization</summary>
+            <div class="body">
+              <div class="row">
+                <label class="check"><input id="humanizeEnabled" type="checkbox" checked /> Randomized delays</label>
+              </div>
+              <div class="field-row">
+                <label class="field">Sleep min (ms)<input id="humanizeMin" type="number" value="1500" /></label>
+                <label class="field">Sleep max (ms)<input id="humanizeMax" type="number" value="4000" /></label>
+                <label class="field">Typing min (ms)<input id="typingMin" type="number" value="60" /></label>
+                <label class="field">Typing max (ms)<input id="typingMax" type="number" value="190" /></label>
+              </div>
+              <div class="row">
+                <button id="btnRandDelay" class="pill tiny">+ Insert humanized wait</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="block">
+            <summary>Autofill / cookies / local storage</summary>
+            <div class="body">
+              <label class="field">Form autofill JSON<textarea id="autofillJson">{
+  "email": "user@example.com",
+  "password": "hunter2"
+}</textarea></label>
+              <label class="field">Cookies JSON<textarea id="cookieJson">[
+  {
+    "name": "session",
+    "value": "abc123",
+    "domain": "example.com",
+    "path": "/"
+  }
+]</textarea></label>
+              <label class="field">LocalStorage JSON<textarea id="storageJson">{
+  "featureFlag": "on"
+}</textarea></label>
+              <div class="row">
+                <button id="btnAutofill" class="pill tiny">Autofill now</button>
+                <button id="btnCookies" class="pill tiny">Inject cookies</button>
+                <button id="btnStorage" class="pill tiny">Inject storage</button>
+                <button id="btnShot" class="pill tiny">Screenshot</button>
+                <button id="btnAddToMacro" class="pill tiny solid">Add all 3 to macro</button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- library -->
+        <div class="card">
+          <div class="card-head">
+            <h2>Macro library</h2>
+            <span class="hint" id="libraryCount">0 saved</span>
+          </div>
+          <div class="row">
+            <button id="btnSaveMacro" class="pill solid tiny">Save current</button>
+            <button id="btnNewMacro" class="pill tiny">New buffer</button>
+            <label class="pill tiny" style="cursor: pointer">Import JSON<input id="btnImportFile" type="file" accept="application/json" style="display: none" /></label>
+          </div>
+          <div class="list" id="libraryList"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toasts"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

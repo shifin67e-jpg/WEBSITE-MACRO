@@ -1,0 +1,8 @@
+node_modules/
+npm-debug.log*
+data/
+.env
+.env.local
+*.log
+*.zip
+.DS_Store
